@@ -1,6 +1,7 @@
 
 /*
  *  Copyright (c) 2012-2012 Yang Hong
+ *  Copyright (c) 2019 Daniel Jarai
  *
  *  GPL2
  *
@@ -24,13 +25,13 @@
 
 
 #ifndef ANDROID
- #define LOGE(...) fprintf(stderr, "I:" __VA_ARGS__)
- #ifndef LOGI
-  #define LOGI(...) fprintf(stderr, "I:" __VA_ARGS__)
+ #define ALOGE(...) fprintf(stderr, "I:" __VA_ARGS__)
+ #ifndef ALOGI
+  #define ALOGI(...) fprintf(stderr, "I:" __VA_ARGS__)
  #endif
 #else
  #define LOG_TAG "uevent-view"
- #define LOG_NIDEBUG 0
+ #define LOG_NDEBUG 0
  #include <utils/Log.h>
 #endif
 
@@ -54,13 +55,13 @@ static int open_uevent_sock(struct netlink_socks *socks, int netlink_proto)
 
 	if ((socks->uevent_sock = socket(PF_NETLINK, SOCK_DGRAM,
 					netlink_proto)) < 0) {
-		LOGE("Unable to create uevent socket: %s\n", strerror(errno));
+		ALOGE("Unable to create uevent socket: %s\n", strerror(errno));
 		return -1;
 	}
 
 	if (bind(socks->uevent_sock, (struct sockaddr *)&socknladdr,
 				sizeof(socknladdr)) < 0) {
-		LOGE("Unable to bind uevent socket: %s\n", strerror(errno));
+		ALOGE("Unable to bind uevent socket: %s\n", strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -108,7 +109,7 @@ void *monitor_kevents(int netlink_proto, FILE *fp)
 	int cnt;
 
 	if (open_uevent_sock(&socks, netlink_proto) < 0) {
-		LOGE("Error while opening the netlink kevent socket\n");
+		ALOGE("Error while opening the netlink kevent socket\n");
 		return NULL;
 	}
 
@@ -121,7 +122,7 @@ void *monitor_kevents(int netlink_proto, FILE *fp)
 			max = socks.uevent_sock;
 
 		if (select(max + 1, &fds, NULL, NULL, NULL) < 0) {
-			LOGE("select() failed (%s)", strerror(errno));
+			ALOGE("select() failed (%s)\n", strerror(errno));
 			return NULL;
 		}
 
@@ -129,14 +130,14 @@ void *monitor_kevents(int netlink_proto, FILE *fp)
 			memset(uevent_buf, 0, BUF_SIZE);
 			if ((cnt = recv(socks.uevent_sock, uevent_buf,
 							BUF_SIZE, 0)) < 0) {
-				LOGE("Error receiving uevent (%s)\n", strerror(errno));
+				ALOGE("Error receiving uevent (%s)\n", strerror(errno));
 				return NULL;
 			}
 
 			uevent_buf[cnt] = '\0';
 			dump_event (uevent_buf, cnt, fp);
 
-			LOGE("%s\n", uevent_buf);
+			ALOGE("%s\n", uevent_buf);
 		}
 
 		if (exit_flag) break;
@@ -170,7 +171,7 @@ int main(int argc, char *argv[])
 	signal(SIGINT, sig_hander);
 
 	/* Monitor */
-	LOGD("Monitor NETLINK protocol = %d\n", netlink_proto);
+	ALOGD("Monitor NETLINK protocol = %d\n", netlink_proto);
 	monitor_kevents (netlink_proto, stdout);
 
 	return 0;
