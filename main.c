@@ -1,4 +1,3 @@
-
 /*
  *  Copyright (c) 2012-2012 Yang Hong
  *  Copyright (c) 2019 Daniel Jarai
@@ -23,7 +22,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-
 #ifndef ANDROID
  #define ALOGE(...) fprintf(stderr, "I:" __VA_ARGS__)
  #ifndef ALOGI
@@ -35,13 +33,12 @@
  #include <utils/Log.h>
 #endif
 
-struct netlink_socks
-{
-   int uevent_sock;
+struct netlink_socks {
+	int uevent_sock;
 };
 
 static int exit_flag = 0;
-static struct netlink_socks socks = { 0 };
+static struct netlink_socks socks = {0};
 
 static int open_uevent_sock(struct netlink_socks *socks, int netlink_proto)
 {
@@ -54,52 +51,54 @@ static int open_uevent_sock(struct netlink_socks *socks, int netlink_proto)
 	socknladdr.nl_groups = 0xffffffff;
 
 	if ((socks->uevent_sock = socket(PF_NETLINK, SOCK_DGRAM,
-					netlink_proto)) < 0) {
+									 netlink_proto)) < 0) {
 		ALOGE("Unable to create uevent socket: %s\n", strerror(errno));
 		return -1;
 	}
 
-	if (bind(socks->uevent_sock, (struct sockaddr *)&socknladdr,
-				sizeof(socknladdr)) < 0) {
+	if (bind(socks->uevent_sock, (struct sockaddr *) &socknladdr,
+			 sizeof(socknladdr)) < 0) {
 		ALOGE("Unable to bind uevent socket: %s\n", strerror(errno));
 		return -1;
 	}
 	return 0;
 }
 
-void dump_event (char *buf, int len, FILE *fd)
+void dump_event(char *buf, int len, FILE *fd)
 {
 	int i;
 	int cap = 0;
 
-	if (! fd) return;
+	if (!fd)
+		return;
 
 	for (i = 0; i < len; i++) {
 		/* Captial char as new line start */
 		if (buf[i] >= 'A' && buf[i] <= 'Z') {
 			if (cap == 0) {
-				fputs ("\n  ", fd);
+				fputs("\n  ", fd);
 			}
 			cap = 1;
-		/* Add space before =/@ char */
+			/* Add space before =/@ char */
 		} else if ((buf[i] == '=') || (buf[i] == '@')) {
 			fprintf(fd, " %c ", *(buf + i));
 			continue;
 		} else {
 			/* lower capse alpha/num as value */
-			if ((buf[i] >= 'a' && buf[i] <= 'z') 
-					|| (buf[i] >= '0' && buf[i] <= '9')) {
+			if ((buf[i] >= 'a' && buf[i] <= 'z') ||
+				(buf[i] >= '0' && buf[i] <= '9')) {
 				cap = 0;
 			}
 		}
 
-		fputc (*(buf + i), fd);
+		fputc(*(buf + i), fd);
 	}
-	fputc ('\n', fd);
-	fputc ('\n', fd);
+
+	fputc('\n', fd);
+	fputc('\n', fd);
 }
 
-#define BUF_SIZE 16*1024
+#define BUF_SIZE 16 * 1024
 
 void *monitor_kevents(int netlink_proto, FILE *fp)
 {
@@ -114,7 +113,6 @@ void *monitor_kevents(int netlink_proto, FILE *fp)
 	}
 
 	while (1) {
-
 		FD_ZERO(&fds);
 		FD_SET(socks.uevent_sock, &fds);
 
@@ -135,22 +133,24 @@ void *monitor_kevents(int netlink_proto, FILE *fp)
 			}
 
 			uevent_buf[cnt] = '\0';
-			dump_event (uevent_buf, cnt, fp);
+			dump_event(uevent_buf, cnt, fp);
 
 			ALOGE("%s\n", uevent_buf);
 		}
 
-		if (exit_flag) break;
+		if (exit_flag)
+			break;
 	}
 
 	if (socks.uevent_sock) {
-		close (socks.uevent_sock);
+		close(socks.uevent_sock);
 	}
 
 	return NULL;
 }
 
-void sig_hander(int signal) {
+void sig_hander(int signal)
+{
 	exit_flag = 1;
 	printf("Bye, signal %d!\n", signal);
 }
@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
 	int netlink_proto = NETLINK_KOBJECT_UEVENT;
 
 	if (argc > 1) {
-		netlink_proto = atoi (argv[1]);
+		netlink_proto = atoi(argv[1]);
 		if (netlink_proto < 0) {
 			netlink_proto = NETLINK_KOBJECT_UEVENT;
 		}
@@ -172,8 +172,7 @@ int main(int argc, char *argv[])
 
 	/* Monitor */
 	ALOGD("Monitor NETLINK protocol = %d\n", netlink_proto);
-	monitor_kevents (netlink_proto, stdout);
+	monitor_kevents(netlink_proto, stdout);
 
 	return 0;
 }
-
